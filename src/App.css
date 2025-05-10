@@ -40,3 +40,18 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Tarif Listesi Satır Stilleri */
+.recipe-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.recipe-row span {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

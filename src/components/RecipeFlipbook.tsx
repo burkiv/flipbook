@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useEffect } from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import styled from 'styled-components';
 import RecipePage, { RecipePageData, DroppedIcon } from './RecipePage';
@@ -54,13 +54,16 @@ interface PageFlipInstance {
   pageFlip: () => {
     flipNext: () => void;
     flipPrev: () => void;
+    flip: (pageIndex: number, animationDirection: string) => void;
     getCurrentPageIndex: () => number;
+    turnToPage: (pageIndex: number) => void; // Yeni metot eklendi
   };
 }
 
 interface RecipeFlipbookProps {
   recipes: RecipePageData[];
   startPage?: number;
+  currentPage?: number; // Yeni prop: App.tsx'ten gelen aktif sayfa indeksi
   isEditing?: boolean;
   selectedIcon?: string | null;
   onIconPlaced: () => void;
@@ -74,6 +77,7 @@ interface RecipeFlipbookProps {
 const RecipeFlipbook: React.FC<RecipeFlipbookProps> = ({
   recipes,
   startPage = 0,
+  currentPage, // Yeni prop alındı
   isEditing,
   selectedIcon,
   onIconPlaced,
@@ -86,15 +90,20 @@ const RecipeFlipbook: React.FC<RecipeFlipbookProps> = ({
   const flipBook = useRef<PageFlipInstance | null>(null);
   const flipbookContainerRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (flipBook.current && typeof currentPage === 'number') {
+      const pageFlipApi = flipBook.current.pageFlip?.();
+      if (pageFlipApi && pageFlipApi.getCurrentPageIndex() !== currentPage) {
+        console.log(`[RecipeFlipbook] Turning to page ${currentPage} due to prop change.`);
+        pageFlipApi.turnToPage(currentPage);
+      }
+    }
+  }, [currentPage]);
+
   const handleFlip = useCallback((e: { data: number }) => {
     console.log('[RecipeFlipbook] handleFlip triggered. Page data from library:', e.data);
     onPageFlip(e.data);
   }, [onPageFlip]);
-
-  const flipNextProgrammatic = () => {
-    console.log('[RecipeFlipbook] Programmatic flipNext called');
-    flipBook.current?.pageFlip().flipNext();
-  };
 
   const flipNext = () => {
     flipBook.current?.pageFlip().flipNext();
@@ -184,20 +193,7 @@ const RecipeFlipbook: React.FC<RecipeFlipbookProps> = ({
         $isVisible={isEditing && !!selectedIcon} 
         onClick={handleGlobalIconDrop} 
       />
-      <button 
-        onClick={flipNextProgrammatic} 
-        style={{
-          position: 'absolute', 
-          top: '10px', 
-          left: '50%', 
-          transform: 'translateX(-50%)',
-          zIndex: 2000,
-          padding: '10px',
-          background: 'lightgreen'
-        }}
-      >
-        Test Çevir (Programatik)
-      </button>
+     
 
       <HTMLFlipBook
         width={700} // Temel prop

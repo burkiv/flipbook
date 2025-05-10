@@ -26,6 +26,9 @@ const NotebookWrapper = styled.div`
   height: 800px;
   transform-style: preserve-3d;
   margin: auto;
+  background: transparent; 
+  box-shadow: none; 
+  z-index: 200; // CoverWrapper'dan daha yüksek bir z-index
 `;
 
 interface Recipe {
@@ -81,12 +84,20 @@ const ActionButton = styled.button`
 function App() {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [mode, setMode] = useState<'view' | 'new'>('view');
+  const [mode, setMode] = useState<'view' | 'new' | 'edit'>('view');
   const [recipes, setRecipes] = useState<Recipe[]>([exampleRecipe]);
   const [newRecipeBuffer, setNewRecipeBuffer] = useState<Recipe | null>(null);
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const notebookWrapperRef = useRef<HTMLDivElement>(null);
+
+  // Yeni yardımcı fonksiyon
+  const goToRecipe = (recipeIdx: number) => {
+    if (!isOpen) setIsOpen(true); // Defter kapalıysa aç
+    const pageToFlipTo = recipeIdx * 2; // Tarifin sol sayfası (0, 2, 4...)
+    console.log(`[App] goToRecipe called for recipeIdx: ${recipeIdx}, calculated pageToFlipTo: ${pageToFlipTo}`);
+    setCurrentPageIndex(pageToFlipTo);
+  };
 
   const handlePageClick = (idx: number) => {
     console.log(`[App] handlePageClick called with index: ${idx}`);
@@ -125,8 +136,10 @@ function App() {
   };
 
   const handleOpenNotebook = () => {
+    console.log("[App] handleOpenNotebook called. Current isEditing:", isEditing);
     if (!isEditing) {
       setIsOpen(true);
+      console.log("[App] isOpen set to true");
     }
   };
 
@@ -156,10 +169,17 @@ function App() {
 
   const handleSaveNewRecipe = () => {
     if (newRecipeBuffer) {
-      setRecipes((prev) => [...prev, { ...newRecipeBuffer, id: Date.now() }]);
+      const title = prompt('Tarif ismi?', newRecipeBuffer.title || '');
+      // Kullanıcı iptal ederse veya boş bırakırsa, yine de bir başlıkla kaydet
+      const recipeToSave = {
+        ...newRecipeBuffer,
+        title: title?.trim() || `Yeni Tarif ${recipes.length + 1}`,
+        id: Date.now(), // ID burada atanmalı, newRecipeBuffer'da değil
+      };
+      setRecipes(prev => [...prev, recipeToSave]);
     }
     setMode('view');
-    setIsEditing(false);
+    setIsEditing(false);      // Düzenleme modunu kapat
     setNewRecipeBuffer(null);
     setSelectedIcon(null);
   };
@@ -247,11 +267,69 @@ function App() {
 
   const pagesToDisplay = mode === 'new' ? newRecipePages || [] : recipePages;
 
-  console.log('App render. isEditing:', isEditing, 'selectedIcon:', selectedIcon, 'currentPageIndex:', currentPageIndex);
+  console.log('App render. isOpen:', isOpen, 'isEditing:', isEditing, 'selectedIcon:', selectedIcon, 'currentPageIndex:', currentPageIndex);
 
   return (
     <AppContainer>
       <IconPanel isVisible={isEditing} onIconClick={handleIconClick} selectedIcon={selectedIcon} />
+
+      {/* Tarif Listesi ve Silme/Düzenleme Butonları */}
+      {isOpen && mode === 'view' && (
+        <div style={{
+          position: 'absolute',
+          top: '20px',
+          left: '20px',
+          background: 'white',
+          padding: '10px',
+          borderRadius: '5px',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+          zIndex: 2000, // Diğer elementlerin üzerinde olması için
+          maxHeight: 'calc(100vh - 100px)', // Kaydırma için
+          overflowY: 'auto'
+        }}>
+          <h4 style={{ marginTop: 0, marginBottom: '10px' }}>Tariflerim</h4>
+          {recipes.map((r, i) => (
+            <div key={r.id} className="recipe-row"> {/* className eklendi */}
+              <button onClick={()=> {
+                setMode('edit'); // 'edit' moduna geç
+                setIsEditing(true); 
+                goToRecipe(i); 
+              }}
+                title="Düzenle"
+                style={{background: 'none', border: 'none', cursor: 'pointer', padding: '5px'}}
+              >
+                ✏️
+              </button>
+              <button onClick={() => {
+                  if (confirm(`"${r.title || `Tarif #${i+1}`}" silinsin mi?`)) {
+                    setRecipes(prev => prev.filter(rr => rr.id !== r.id));
+                    if (recipes.length === 1 && recipes[0].id === r.id) {
+                        handleCloseNotebook();
+                    } else {
+                        // Eğer silinen tarif aktifse veya sonrasında başka tarif yoksa başa dön
+                        // Bu mantık daha da iyileştirilebilir.
+                        setCurrentPageIndex(0); 
+                    }
+                  }
+              }}
+                title="Tarifi Sil"
+                style={{background: 'none', border: 'none', cursor: 'pointer', padding: '5px'}}
+              >🗑️</button>
+              <span 
+                style={{cursor:'pointer', flex:1, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}} 
+                onClick={() => {
+                  setMode('view');
+                  setIsEditing(false); 
+                  goToRecipe(i); // Yeni fonksiyonu kullan
+                }}
+              >
+                {r.title || `Tarif #${i+1}`}
+              </span>
+            </div>
+          ))}
+          {recipes.length === 0 && <p style={{fontSize: '13px', color: 'grey'}}>Henüz tarif yok.</p>}
+        </div>
+      )}
 
       <NotebookWrapper ref={notebookWrapperRef}>
         <AnimatePresence>
@@ -270,18 +348,37 @@ function App() {
             closeBook={handleCloseNotebook}
             onPageFlip={handlePageFlip}
             onPageClick={handlePageClick}
+            currentPage={currentPageIndex} // Yeni prop eklendi
           />
         )}
       </NotebookWrapper>
 
-      {isOpen && mode === 'new' && (
+      {/* Kaydet/İptal butonları yeni ve edit modunda gösterilecek */}
+      {isOpen && (mode === 'new' || mode === 'edit') && (
         <>
-          <ActionButton className="save" onClick={handleSaveNewRecipe}>
-            Kaydet
-          </ActionButton>
-          <ActionButton className="cancel" onClick={handleCancelNewRecipe}>
-            İptal
-          </ActionButton>
+          <ActionButton className="save" onClick={() => {
+            if (mode === 'new') {
+              handleSaveNewRecipe(); // Bu zaten setIsEditing(false) ve setMode('view') yapıyor
+            } else if (mode === 'edit') {
+              // Var olan tarifi kaydetme (metin zaten onBlur ile güncelleniyor)
+              setIsEditing(false); // Sadece düzenleme modunu kapat
+              setMode('view');
+              // İkonlar da anlık güncelleniyor
+            }
+          }}>Kaydet</ActionButton>
+
+          <ActionButton className="cancel" onClick={() => {
+            if (mode === 'new') {
+              handleCancelNewRecipe(); // Bu zaten setIsEditing(false) ve setMode('view') yapıyor
+            } else if (mode === 'edit') {
+              // Var olan tarif düzenlemesini iptal et
+              // TODO: Eğer değişiklikleri geri almak isteniyorsa, burada orijinal veriyi yükleme mantığı eklenebilir.
+              // Şimdilik sadece düzenleme modunu kapatıp view moduna dönüyoruz.
+              setIsEditing(false);
+              setSelectedIcon(null); // Seçili ikonu temizle
+              setMode('view');
+            }
+          }}>İptal</ActionButton>
         </>
       )}
 
