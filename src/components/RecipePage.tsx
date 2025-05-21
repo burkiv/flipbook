@@ -102,52 +102,37 @@ const EditablePageText = styled.textarea.attrs(props => ({
 
 interface RecipePageProps {
   pageNumber: number;
-  isEditing?: boolean;
-  selectedIcon?: string | null;
-  initialData?: RecipePageData | null;
-  onUpdateIcons?: (pageIndex: number, icons: DroppedIcon[]) => void;
-  onPageClick?: (pageIndex: number) => void;
-  onPageTextChange?: (pageNumber: number, newText: string) => void; 
-  activeTextPageIndex?: number; // App.tsx'ten gelen aktif sayfa indeksi
+  isEditing: boolean;
+  initialData: RecipePageData;
+  onUpdateIcons: (pageIndex: number, icons: DroppedIcon[]) => void;
+  onPageTextChange?: (pageNumber: number, newText: string) => void;
+  activeTextPageIndex: number;
 }
 
 const RecipePage = React.forwardRef<HTMLDivElement, RecipePageProps>((
-  { pageNumber, isEditing = false, selectedIcon, initialData = null, onUpdateIcons, onPageClick, onPageTextChange, activeTextPageIndex }, 
+  { pageNumber, isEditing, initialData, onUpdateIcons, onPageTextChange, activeTextPageIndex }, 
   ref
 ) => {
-  const [icons, setIcons] = useState<DroppedIcon[]>(initialData?.icons || []);
-  const [text, setText] = useState(initialData?.text || ''); // Yeni lokal state
+  const [icons, setIcons] = useState<DroppedIcon[]>(initialData.icons || []);
+  const [text, setText] = useState(initialData.text || '');
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
-  console.log(`[RecipePage] Rendering page ${pageNumber}, isEditing: ${isEditing}, isActiveForTextEdit: ${activeTextPageIndex === pageNumber}, initialData.text: ${initialData?.text?.substring(0,10)}..., currentTextValue: ${text.substring(0,10)}...`); 
-/*
   useEffect(() => {
-    console.log(`[RecipePage] useEffect for initialData.text on page ${pageNumber}. New initialData.text: ${initialData?.text?.substring(0,10)}...`);
-    setText(initialData?.text || '');
-  }, [initialData?.text, pageNumber]); // pageNumber bağımlılıklara eklendi
-*/
-  useEffect(() => {
-    console.log(`[RecipePage] useEffect for initialData.icons on page ${pageNumber}. New initialData.icons:`, initialData?.icons);
-    setIcons(initialData?.icons || []);
-  }, [initialData?.icons, pageNumber]);
+    setIcons(initialData.icons || []);
+  }, [initialData.icons, pageNumber]);
 
   useEffect(() => {
     if (isEditing && activeTextPageIndex === pageNumber && textAreaRef.current) {
-      console.log(`[RecipePage] Focusing textarea on page ${pageNumber}`);
       textAreaRef.current.focus();
     }
   }, [isEditing, activeTextPageIndex, pageNumber]);
 
   const handleIconClick = (event: React.MouseEvent<HTMLDivElement>, iconId: number) => {
-    console.log(`[RecipePage] handleIconClick triggered for iconId: ${iconId} on pageNumber: ${pageNumber}, isEditing: ${isEditing}`);
     event.stopPropagation();
     if (isEditing) {
       const updatedIcons = icons.filter(icon => icon.id !== iconId);
-      console.log(`[RecipePage] Icons for page ${pageNumber} after filter (local):`, updatedIcons);
       setIcons(updatedIcons);
-      if (onUpdateIcons) {
-        onUpdateIcons(pageNumber, updatedIcons);
-      }
+      onUpdateIcons(pageNumber, updatedIcons);
     }
   };
 
@@ -157,23 +142,12 @@ const RecipePage = React.forwardRef<HTMLDivElement, RecipePageProps>((
     >
       <EditablePageText
         ref={textAreaRef}
-        value={text} // Lokal state'i kullan
-        onChange={(e) => {
-          setText(e.target.value); // Sadece lokal state'i güncelle
-        }}
-        onBlur={() => {
-          // Kullanıcı metin alanından ayrıldığında parent'ı bilgilendir
-          console.log(`[RecipePage] onBlur on page ${pageNumber}, sending text to parent:`, text);
-          onPageTextChange?.(pageNumber, text);
-        }}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() => onPageTextChange?.(pageNumber, text)}
         readOnly={!isEditing}
         placeholder={pageNumber % 2 === 0 ? "Malzemeler ve Başlık..." : "Hazırlanışı..."}
-        onKeyDown={(e) => console.log(`[RecipePage] KeyDown on page ${pageNumber}:`, e.key)}
-        onInput={(e) => console.log(`[RecipePage] Input on page ${pageNumber}:`, (e.target as HTMLTextAreaElement).value)}
-        onMouseDownCapture={(e) => {
-          console.log('[RecipePage] EditablePageText onMouseDownCapture, stopping propagation.');
-          e.stopPropagation();
-        }} // Olayın Page'e yayılmasını engelle
+        onMouseDownCapture={(e) => e.stopPropagation()}
       />
 
       {icons.map((icon) => {
@@ -188,10 +162,8 @@ const RecipePage = React.forwardRef<HTMLDivElement, RecipePageProps>((
               top: `${top_abs}px`
             }}
             onMouseDown={(e) => {
-              e.stopPropagation(); // Olayın Page veya HTMLFlipBook'a gitmesini engelle
-              if (isEditing) { // Sadece düzenleme modunda silme işlemi yap
-                handleIconClick(e, icon.id);
-              }
+              e.stopPropagation();
+              if (isEditing) handleIconClick(e, icon.id);
             }}
             title={isEditing ? "Silmek için tıkla" : ""}
             $isEditing={isEditing}

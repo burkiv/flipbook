@@ -99,11 +99,6 @@ function App() {
     setCurrentPageIndex(pageToFlipTo);
   };
 
-  const handlePageClick = (idx: number) => {
-    console.log(`[App] handlePageClick called with index: ${idx}`);
-    setCurrentPageIndex(idx);
-  };
-
   const recipePages = useMemo((): RecipePageData[] => {
     const pages: RecipePageData[] = [];
     recipes.forEach((recipe) => {
@@ -251,12 +246,6 @@ function App() {
     }
   };
 
-  const handleIconPlaced = () => {
-    if (isEditing) {
-      setSelectedIcon(null);
-    }
-  };
-
   const handlePageFlip = (pageIndex: number) => {
     console.log(
       `Flipped to page: ${pageIndex}, isEditing: ${isEditing}, selectedIcon: ${selectedIcon}`
@@ -341,14 +330,11 @@ function App() {
             key={mode === 'new' ? 'new-book' : `book-${recipes.length}`}
             recipes={pagesToDisplay}
             isEditing={isEditing}
-            selectedIcon={selectedIcon}
-            onIconPlaced={handleIconPlaced}
             onUpdatePageIcons={handleUpdatePageIcons}
             onPageTextChange={handlePageTextChange}
             closeBook={handleCloseNotebook}
             onPageFlip={handlePageFlip}
-            onPageClick={handlePageClick}
-            currentPage={currentPageIndex} // Yeni prop eklendi
+            currentPage={currentPageIndex}
           />
         )}
       </NotebookWrapper>
