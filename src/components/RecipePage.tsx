@@ -73,6 +73,7 @@ const EditablePageText = styled.textarea.attrs(props => ({
   width: calc(100% - 80px); /* inset left+right */
   height: calc(100% - 80px); /* inset top+bottom */
   min-height: 720px; // TextBase ile aynı min-height
+  max-height: 720px; // YAZI ALANI SABİT KALSIN, SCROLL OLMASIN
   box-sizing: border-box;
   background: transparent;
   border: none; // Düzenleme modunda kenarlık eklenebilir veya App.tsx'teki kırmızı kenarlık gibi bir overlay kullanılabilir
@@ -86,8 +87,8 @@ const EditablePageText = styled.textarea.attrs(props => ({
   overflow-wrap: break-word;
   z-index: 1600; // z-index geçici olarak artırıldı (GlobalIconDropZone'un z-index'i 1500)
   opacity: 1; // Her zaman görünür, okunabilirliği readOnly ile kontrol edilecek
-  // pointer-events'i isEditing durumuna göre ayarla
   pointer-events: ${(props) => (props.readOnly ? 'none' : 'auto')};
+  overflow: hidden; // SCROLL OLMASIN
 
   &:focus {
     /* İsteğe bağlı: odaklandığında hafif bir kenarlık */
@@ -105,9 +106,9 @@ interface RecipePageProps {
   isEditing: boolean;
   initialData: RecipePageData;
   onUpdateIcons: (pageIndex: number, icons: DroppedIcon[]) => void;
-  onPageTextChange?: (pageNumber: number, newText: string) => void;
+  onPageTextChange?: (pageNumber: number, newText: string) => void; // Eksik prop eklendi
   activeTextPageIndex: number;
-  selectedIcon?: string | null; // EKLENDİ
+  selectedIcon?: string | null;
 }
 
 const RecipePage = React.forwardRef<HTMLDivElement, RecipePageProps>((
@@ -163,6 +164,28 @@ const RecipePage = React.forwardRef<HTMLDivElement, RecipePageProps>((
     }
   };
 
+  // --- YAZI SINIRLAMASI (GÖRSEL OLARAK SATIR/SAYFA DOLULUĞUNA GÖRE) ---
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    const maxHeight = 240; // px, textarea'nın max yüksekliği
+    // Geçici bir textarea oluşturup yükseklik ölç
+    const temp = document.createElement('textarea');
+    temp.style.visibility = 'hidden';
+    temp.style.position = 'absolute';
+    temp.style.height = 'auto';
+    temp.style.width = 'calc(100% - 80px)';
+    temp.style.fontFamily = 'Architects Daughter, cursive';
+    temp.style.fontSize = '1.2em';
+    temp.style.lineHeight = '1.6';
+    temp.value = value;
+    document.body.appendChild(temp);
+    const totalHeight = temp.scrollHeight;
+    document.body.removeChild(temp);
+    // Eğer toplam yükseklik max'ı geçiyorsa eski değeri koru
+    if (totalHeight > maxHeight) return;
+    setText(value);
+  };
+
   return (
     <Page 
       ref={ref}
@@ -171,7 +194,7 @@ const RecipePage = React.forwardRef<HTMLDivElement, RecipePageProps>((
       <EditablePageText
         ref={textAreaRef}
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={handleTextChange}
         onBlur={() => onPageTextChange?.(pageNumber, text)}
         readOnly={!isEditing}
         placeholder={pageNumber % 2 === 0 ? "Malzemeler ve Başlık..." : "Hazırlanışı..."}
