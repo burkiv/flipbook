@@ -29,7 +29,7 @@ const ClickableArea = styled.div`
 `;
 
 function PencilModel() {
-  const { scene } = useGLTF('/src/assets/models/pencil.glb');
+  const { scene } = useGLTF('/models/pencil.glb');
   
   return (
     <primitive 
