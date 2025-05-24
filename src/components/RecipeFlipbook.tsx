@@ -57,6 +57,7 @@ interface RecipeFlipbookProps {
   onPageTextChange?: (pageNumber: number, newText: string) => void;
   closeBook?: () => void;
   onPageFlip: (pageIndex: number) => void;
+  selectedIcon?: string | null; // EKLENDİ
 }
 
 const RecipeFlipbook: React.FC<RecipeFlipbookProps> = ({
@@ -67,7 +68,8 @@ const RecipeFlipbook: React.FC<RecipeFlipbookProps> = ({
   onUpdatePageIcons,
   onPageTextChange,
   closeBook,
-  onPageFlip
+  onPageFlip,
+  selectedIcon // EKLENDİ
 }) => {
   const flipBook = useRef<PageFlipInstance | null>(null);
 
@@ -135,6 +137,7 @@ const RecipeFlipbook: React.FC<RecipeFlipbookProps> = ({
             onUpdateIcons={onUpdatePageIcons}
             onPageTextChange={onPageTextChange}
             activeTextPageIndex={currentPage ?? 0}
+            selectedIcon={isEditing ? selectedIcon ?? null : null} // EKLENDİ
           />
         ))}
       </HTMLFlipBook>

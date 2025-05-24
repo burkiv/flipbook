@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { AnimatePresence } from 'framer-motion';
 import RecipeFlipbook from './components/RecipeFlipbook';
@@ -7,7 +7,7 @@ import { RecipePageData, DroppedIcon } from './components/RecipePage';
 import Pencil3D from './components/Pencil3D';
 import IconPanel from './components/IconPanel';
 
-const AppContainer = styled.div`
+const AppContainer = styled.div<{ $stickerSelected?: boolean }>`
   width: 100vw;
   height: 100vh;
   background: #f0f0f0;
@@ -18,6 +18,7 @@ const AppContainer = styled.div`
   overflow: hidden;
   perspective: 2000px;
   margin: auto;
+  cursor: ${p => p.$stickerSelected ? 'crosshair' : 'default'};
 `;
 
 const NotebookWrapper = styled.div`
@@ -90,6 +91,12 @@ function App() {
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const notebookWrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const clearHandler = () => setSelectedIcon(null);
+    window.addEventListener('clearSelectedIcon', clearHandler);
+    return () => window.removeEventListener('clearSelectedIcon', clearHandler);
+  }, []);
 
   // Yeni yardımcı fonksiyon
   const goToRecipe = (recipeIdx: number) => {
@@ -259,7 +266,7 @@ function App() {
   console.log('App render. isOpen:', isOpen, 'isEditing:', isEditing, 'selectedIcon:', selectedIcon, 'currentPageIndex:', currentPageIndex);
 
   return (
-    <AppContainer>
+    <AppContainer $stickerSelected={isEditing && !!selectedIcon}>
       <IconPanel isVisible={isEditing} onIconClick={handleIconClick} selectedIcon={selectedIcon} />
 
       {/* Tarif Listesi ve Silme/Düzenleme Butonları */}
@@ -335,6 +342,7 @@ function App() {
             closeBook={handleCloseNotebook}
             onPageFlip={handlePageFlip}
             currentPage={currentPageIndex}
+            selectedIcon={selectedIcon} // EKLENDİ
           />
         )}
       </NotebookWrapper>

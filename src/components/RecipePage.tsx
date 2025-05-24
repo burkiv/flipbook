@@ -107,10 +107,11 @@ interface RecipePageProps {
   onUpdateIcons: (pageIndex: number, icons: DroppedIcon[]) => void;
   onPageTextChange?: (pageNumber: number, newText: string) => void;
   activeTextPageIndex: number;
+  selectedIcon?: string | null; // EKLENDİ
 }
 
 const RecipePage = React.forwardRef<HTMLDivElement, RecipePageProps>((
-  { pageNumber, isEditing, initialData, onUpdateIcons, onPageTextChange, activeTextPageIndex }, 
+  { pageNumber, isEditing, initialData, onUpdateIcons, onPageTextChange, activeTextPageIndex, selectedIcon }, 
   ref
 ) => {
   const [icons, setIcons] = useState<DroppedIcon[]>(initialData.icons || []);
@@ -136,9 +137,36 @@ const RecipePage = React.forwardRef<HTMLDivElement, RecipePageProps>((
     }
   };
 
+  // --- YENİ: Sayfaya tıklayınca sticker ekle ---
+  const handlePageClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isEditing && selectedIcon) {
+      // Tıklanan noktayı hesapla (padding'i çıkar)
+      const rect = (e.target as HTMLDivElement).getBoundingClientRect();
+      const x = e.clientX - rect.left - PAGE_PADDING;
+      const y = e.clientY - rect.top - PAGE_PADDING;
+      if (x < 0 || y < 0 || x > ICON_PLACEABLE_WIDTH || y > ICON_PLACEABLE_HEIGHT) return;
+      const xPercent = (x / ICON_PLACEABLE_WIDTH) * 100;
+      const yPercent = (y / ICON_PLACEABLE_HEIGHT) * 100;
+      const newIcon: DroppedIcon = {
+        id: Date.now(),
+        src: selectedIcon,
+        xPercent,
+        yPercent
+      };
+      const updatedIcons = [...icons, newIcon];
+      setIcons(updatedIcons);
+      onUpdateIcons(pageNumber, updatedIcons);
+      // --- Seçili stickerı sıfırla ---
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('clearSelectedIcon'));
+      }
+    }
+  };
+
   return (
     <Page 
       ref={ref}
+      onClick={handlePageClick} // EKLENDİ
     >
       <EditablePageText
         ref={textAreaRef}
